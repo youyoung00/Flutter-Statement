@@ -1,12 +1,18 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 final authRepository = AuthRepository();
 
-void main() {
-  runApp(const MyApp());
-}
+void main() => runApp(
+      MultiProvider(
+        child: const MyApp(),
+        providers: [
+          ChangeNotifierProvider.value(
+            value: AuthRepository(),
+          )
+        ],
+      ),
+    );
 
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
@@ -36,7 +42,9 @@ class LoginPage extends StatelessWidget {
       body: Center(
           child: ElevatedButton(
         onPressed: () {
-          authRepository.setAuthState(AuthState.Authenticated);
+          Provider.of<AuthRepository>(context, listen: false)
+              .setState(AuthState.Authenticated);
+          // authRepository.setAuthState(AuthState.Authenticated);
         },
         child: const Text('로그인'),
       )),
@@ -56,7 +64,9 @@ class MainPage extends StatelessWidget {
       body: Center(
           child: ElevatedButton(
         onPressed: () {
-          authRepository.setAuthState(AuthState.UnAuthenticated);
+          Provider.of<AuthRepository>(context, listen: false)
+              .setState(AuthState.UnAuthenticated);
+          // authRepository.setAuthState(AuthState.UnAuthenticated);
         },
         child: const Text('로그아웃'),
       )),
@@ -69,17 +79,22 @@ enum AuthState {
   UnAuthenticated,
 }
 
-class AuthRepository {
-  AuthState auth = AuthState.UnAuthenticated;
+/// 상태를 관리하는 클래스
+class AuthRepository with ChangeNotifier {
+  AuthState authState = AuthState.UnAuthenticated;
 
-  final _streamController = StreamController<AuthState>()
-    ..add(AuthState.UnAuthenticated);
-
-  get authStream => _streamController.stream;
-
-  setAuthState(AuthState state) {
-    _streamController.add(state);
+  setState(AuthState state) {
+    authState = state;
+    notifyListeners();
   }
+// final _streamController = StreamController<AuthState>()
+//   ..add(AuthState.UnAuthenticated);
+//
+// get authStream => _streamController.stream;
+//
+// setAuthState(AuthState state) {
+//   _streamController.add(state);
+// }
 }
 
 class RootPage extends StatelessWidget {
@@ -87,14 +102,8 @@ class RootPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<AuthState>(
-      stream: authRepository.authStream,
-      builder: (BuildContext context, AsyncSnapshot snapshop) {
-        if (snapshop.data == AuthState.UnAuthenticated) {
-          return LoginPage();
-        }
-        return MainPage();
-      },
-    );
+    AuthState authState = Provider.of<AuthRepository>(context).authState;
+
+    return authState == AuthState.UnAuthenticated ? LoginPage() : MainPage();
   }
 }
